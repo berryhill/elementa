@@ -1,0 +1,45 @@
+replicaCount: 2
+image:
+  repository: ghcr.io/berryhill/elementa
+  # Set an immutable build tag or digest; no image is published by this chart.
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+serviceAccount:
+  create: true
+  name: ""
+service:
+  port: 80
+containerPort: 3000
+ingress:
+  enabled: true
+  className: nginx
+  host: elementafestival.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-http
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls:
+    enabled: true
+    secretName: elementa-tls
+site:
+  # Hosting domain does not authorize an indexable launch.
+  stage: preview
+  origin: https://elementafestival.com
+  festivalFactsApproved: false
+  announcementInstantApproved: false
+# Reference an existing Secret; never place credential values in Helm values.
+existingEnvSecret: ""
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
