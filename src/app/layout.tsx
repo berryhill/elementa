@@ -14,5 +14,8 @@ export default async function RootLayout({children}:{children:ReactNode}) {
  // Request-time SSR is intentional: no client effect or child-param assumption.
  const candidate=(await headers()).get(localeHeader);
  const lang=candidate&&isLocale(candidate)?candidate:defaultLocale;
- return <html lang={lang}><body data-phase="rest">{children}</body></html>;
+ // Browser extensions can add root attributes (e.g. analytics opt-out) before
+ // hydration. Preserve those user-owned markers and tolerate root-only drift;
+ // descendant hydration diagnostics remain enabled. Locale stays server-owned.
+ return <html lang={lang} suppressHydrationWarning><body data-phase="rest">{children}</body></html>;
 }

@@ -140,7 +140,7 @@ test('route source preserves server rendering, locale allowlists and real naviga
   assert.match(landing,/<a id="en" href="\/en"/);
   assert.match(landing,/indexable && origin && <script type="application\/ld\+json"/);
   assert.match(layout,/await headers\(\)/);
-  assert.match(layout,/<html lang=\{lang\}>/);
+  assert.match(layout,/<html lang=\{lang\} suppressHydrationWarning>/);
   assert.match(layout,/getSiteConfig\(\)/);
   assert.match(root,/redirect\('\/es'\)/);
   assert.match(proxy,/localeRequestHeaders\(request.nextUrl.pathname,request.headers\)/);
