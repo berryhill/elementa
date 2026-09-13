@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "test:browser": "node tests/browser.e2e.mjs",
+    "test:hydration": "node tests/hydration.e2e.mjs",
     "test:a11y": "node tests/accessibility.e2e.mjs"
   },
   "dependencies": {
