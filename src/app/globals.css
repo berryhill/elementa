@@ -52,7 +52,7 @@ h1{aspect-ratio:auto;max-height:none!important;flex-direction:column;gap:19px;wi
 #logo{width:100%;height:auto;aspect-ratio:1096/111;object-fit:contain;flex-shrink:0}
 .chapter{color:var(--sand);margin-top:15px;letter-spacing:.4em;font-size:11px}
 .essence,#release-state{font-family:var(--voice-font);font-style:normal;font-weight:400;font-size:var(--voice-size);line-height:var(--voice-line);letter-spacing:.035em;color:var(--sand-light)}
-.essence{margin-top:22px}
+.essence{margin-top:22px;font-size:calc(var(--voice-size) * .88)}
 .festival{margin-top:24px}
 .eyebrow,h2{font-family:var(--ui-font);font-size:var(--label-size);line-height:1.5;font-weight:400;color:var(--sage)}
 .eyebrow{letter-spacing:.24em}h2{letter-spacing:.16em}
