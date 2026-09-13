@@ -17,9 +17,10 @@ export const copy = {
   pauseLabel:'Pausar movimiento y actualizaciones del contador', resumeLabel:'Reanudar movimiento y contador',
   cta:'Quiero recibir novedades', signupTitle:'Sigue cerca de ELEMENTA.', intro:'Recibe el lineup, la apertura de entradas y las novedades del festival en tu correo.',
   email:'Correo electrónico', consent:'Me interesa recibir novedades de ELEMENTA sobre el lineup y las entradas.',
-  privacy:'La suscripción todavía no está conectada. No se envía ni se guarda tu dirección.',
-  submit:'Unirme a la lista', close:'Cerrar', result:'Esta es una vista previa. Tu correo no se ha enviado ni guardado.',
-  noScript:'Activa JavaScript para abrir la vista previa de suscripción.', back:'Volver a ELEMENTA',
+  privacy:'Al suscribirte, guardamos tu correo, idioma y consentimiento para enviarte novedades de ELEMENTA. No guardamos tu dirección IP con la suscripción.',
+  submit:'Unirme a la lista', close:'Cerrar', result:'Tu suscripción está guardada. Gracias por seguir cerca de ELEMENTA.',
+  sending:'Enviando…', error:'No pudimos confirmar tu suscripción. Inténtalo de nuevo.',
+  noScript:'Activa JavaScript para abrir el formulario de suscripción.', back:'Volver a ELEMENTA',
  },
  en: {
   essence:'A house music festival rooted in Playa Venao.', festivalLabel:'THE FESTIVAL', dates:'February 19–20, 2027', location:'Playa Venao, Panama',
@@ -30,8 +31,9 @@ export const copy = {
   pauseLabel:'Pause motion and countdown updates', resumeLabel:'Resume motion and countdown',
   cta:'Keep me updated', signupTitle:'Stay close to ELEMENTA.', intro:'Get the lineup, ticket release and festival news in your inbox.',
   email:'Email address', consent:'I am interested in ELEMENTA lineup and ticket updates.',
-  privacy:'Email signup is not connected yet. Your address is not sent or saved.',
-  submit:'Join the list', close:'Close', result:'This is a signup preview. Your email has not been sent or saved.',
-  noScript:'Enable JavaScript to open the signup preview.', back:'Back to ELEMENTA',
+  privacy:'When you subscribe, we store your email, language and consent for ELEMENTA updates. We do not store your IP address with your subscription.',
+  submit:'Join the list', close:'Close', result:'Your subscription is saved. Thanks for staying close to ELEMENTA.',
+  sending:'Sending…', error:'We could not confirm your subscription. Please try again.',
+  noScript:'Enable JavaScript to open the signup form.', back:'Back to ELEMENTA',
  }
 } as const;
