@@ -56,7 +56,7 @@ h1{aspect-ratio:auto;max-height:none!important;flex-direction:column;gap:19px;wi
 .festival{margin-top:24px}
 .eyebrow,h2{font-family:var(--ui-font);font-size:var(--label-size);line-height:1.5;font-weight:400;color:var(--sage)}
 .eyebrow{letter-spacing:.24em}h2{letter-spacing:.16em}
-#festival-dates{color:var(--sand-light)}
+#festival-dates{color:var(--sand-light);font-size:clamp(20px,2.2vw,28px);line-height:1.3;font-weight:500;letter-spacing:.025em;margin-top:0;text-wrap:balance}
 .destination,.unit,#launch-status{color:var(--sage)}
 .digit{color:var(--sand);font-family:var(--ui-font);font-weight:300}
 #countdown b{color:#998b77}

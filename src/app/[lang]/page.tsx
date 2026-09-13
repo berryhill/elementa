@@ -24,7 +24,7 @@ export default async function Landing({params}:{params:Promise<{lang:string}>}) 
     <main id="main" tabIndex={-1}><div className="composition">
       <div className="brand"><h1 aria-label={`${festival.officialName} ${festival.editionName}`}><img id="emblem" src="/assets/elementa-emblem.png" width="88" height="86" alt="" aria-hidden="true"/><img id="logo" src="/assets/elementa-wordmark.png" width="1096" height="111" alt="ELEMENTA"/></h1><p className="chapter detail">{festival.editionName}</p></div>
       <p className="essence detail">{t.essence}</p>
-      <div className="festival detail"><span className="eyebrow">{t.festivalLabel}</span><p id="festival-dates">{t.dates}</p><p className="destination">{t.location}</p></div>
+      <div className="festival detail"><p id="festival-dates">{t.dates}</p><p className="destination">{t.location}</p></div>
       <div className="release detail"><div className="hairline" aria-hidden="true"><span/><i/><span/></div>
         <Countdown lang={lang} initialValues={countdownValues(festival.announcementAt, Date.now())}/>
         <p id="release-date" className="release-copy"><time dateTime={festival.announcementAt}>{t.releaseDate}</time></p>
