@@ -70,6 +70,10 @@ Run `npm test` for handler validation/acknowledgement/failure/duplicate semantic
 
 Festival dates and the announcement instant are separate values in `src/content/festival.ts`. Current preview values must receive operational approval before launch. No artists, prices, venue address or available-ticket claims are invented. Event/Offer structured data remains deferred pending the necessary approved facts.
 
+## Container and Helm packaging
+
+The Dockerfile builds a nonroot Next.js standalone image. `helm/` supplies the Deployment, Service, ServiceAccount and NGINX/cert-manager ingress for `elementafestival.com`. See [helm/README.md](helm/README.md). Configure signup through an existing Secret containing `MONGODB_URI` and `SIGNUP_ALLOWED_ORIGIN`; pass its name as `existingEnvSecret`. No credentials belong in chart values. Packaging does not enable indexing or deploy the application.
+
 ## Assets
 
 The adapted Playa Venao photograph is credited on the localized credits pages under CC BY-SA 3.0. That license does not extend to ELEMENTA brand artwork or application code. Brand assets remain subject to their owners' rights.
