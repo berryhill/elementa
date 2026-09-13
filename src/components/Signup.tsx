@@ -10,8 +10,47 @@ export default function Signup({ lang }: { lang: Locale }) {
   const form = useRef<HTMLFormElement>(null);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState('');
+  const [pending, setPending] = useState(false);
+  const active = useRef<AbortController | null>(null);
 
-  useEffect(() => { setReady(typeof dialog.current?.showModal === 'function'); }, []);
+  useEffect(() => {
+    setReady(typeof dialog.current?.showModal === 'function');
+    return () => { active.current?.abort(); active.current = null; };
+  }, []);
+
+  function cancelRequest() {
+    active.current?.abort();
+    active.current = null;
+    setPending(false);
+  }
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (active.current || !event.currentTarget.reportValidity()) return;
+    const target = event.currentTarget;
+    const controller = new AbortController();
+    active.current = controller;
+    setPending(true);
+    setMessage('');
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ email: (target.elements.namedItem('email') as HTMLInputElement).value,
+          locale: lang, consent: (target.elements.namedItem('consent') as HTMLInputElement).checked }),
+      });
+      if (!response.ok || (await response.json()).ok !== true) throw new Error('Signup unavailable');
+      if (active.current !== controller || !dialog.current?.open) return;
+      setMessage(t.result);
+      target.reset();
+    } catch {
+      if (active.current === controller && dialog.current?.open) setMessage(t.error);
+    } finally {
+      clearTimeout(timer);
+      if (active.current === controller) { active.current = null; setPending(false); }
+    }
+  }
 
   function open() {
     if (!dialog.current || dialog.current.open) return;
@@ -20,7 +59,7 @@ export default function Signup({ lang }: { lang: Locale }) {
     dialog.current.querySelector<HTMLInputElement>('#email-address')?.focus();
   }
 
-  function close() { dialog.current?.close(); }
+  function close() { cancelRequest(); dialog.current?.close(); }
 
   return <>
     <div id="email-cta">
@@ -28,7 +67,7 @@ export default function Signup({ lang }: { lang: Locale }) {
       <noscript><p>{t.noScript}</p></noscript>
     </div>
     <dialog ref={dialog} id="email-dialog" aria-labelledby="email-title" aria-describedby="email-intro email-privacy"
-      onClose={() => { form.current?.reset(); setMessage(''); button.current?.focus(); }}
+      onClose={() => { cancelRequest(); form.current?.reset(); setMessage(''); button.current?.focus(); }}
       onCancel={e => { e.preventDefault(); close(); }}
       onClick={e => {
         if (e.target !== e.currentTarget) return;
@@ -38,19 +77,12 @@ export default function Signup({ lang }: { lang: Locale }) {
       <button className="email-close" type="button" aria-label={t.close} onClick={close}>×</button>
       <h2 id="email-title">{t.signupTitle}</h2>
       <p id="email-intro">{t.intro}</p>
-      {/* Exercise the approved form design without a network/storage destination.
-          Submission reports only the preview result, never subscription success. */}
-      <form ref={form} autoComplete="off" onSubmit={e => {
-        e.preventDefault();
-        if (!e.currentTarget.reportValidity()) return;
-        setMessage(t.result);
-        e.currentTarget.reset();
-      }}>
+      <form ref={form} autoComplete="off" onSubmit={submit} aria-busy={pending}>
         <label className="email-label" htmlFor="email-address">{t.email}</label>
-        <input id="email-address" type="email" required maxLength={254} inputMode="email" autoComplete="off" aria-describedby="email-privacy" />
-        <label className="email-consent"><input type="checkbox" required /><span>{t.consent}</span></label>
+        <input id="email-address" name="email" disabled={pending} type="email" required maxLength={254} inputMode="email" autoComplete="off" aria-describedby="email-privacy" />
+        <label className="email-consent"><input name="consent" disabled={pending} type="checkbox" required /><span>{t.consent}</span></label>
         <p id="email-privacy" className="email-privacy">{t.privacy}</p>
-        <button type="submit" className="email-submit">{t.submit}</button>
+        <button type="submit" disabled={pending} className="email-submit">{pending ? t.sending : t.submit}</button>
         <p role="status" aria-live="polite">{message}</p>
       </form>
     </dialog>

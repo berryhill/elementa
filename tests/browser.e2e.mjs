@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 process.env.PLAYWRIGHT_BROWSERS_PATH ||= resolve('node_modules/.cache/ms-playwright');
-const { chromium } = await import('@playwright/test');
+const { chromium, expect } = await import('@playwright/test');
 const base = process.env.PREVIEW_URL || 'http://127.0.0.1:3107';
 const output = resolve('docs/verification');
 await mkdir(output, { recursive: true });
@@ -41,10 +41,11 @@ try {
         assert.equal(await page.locator('input[type=checkbox]').evaluate(e=>e.validity.valueMissing),true);
         await page.locator('input[type=checkbox]').check();
         const requests = [];
+        await page.route('**/api/signup', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true})}));
         page.on('request', r=>{if(['fetch','xhr'].includes(r.resourceType()))requests.push(r.url());});
         await page.locator('.email-submit').click();
-        assert.match(await page.locator('#email-dialog [role=status]').innerText(),lang==='es'?/no se ha enviado ni guardado/:/not been sent or saved/);
-        assert.deepEqual(requests,[]);
+        await expect(page.locator('#email-dialog [role=status]')).toContainText(lang==='es'?'Tu suscripción está guardada':'Your subscription is saved');
+        assert.deepEqual(requests,[base+'/api/signup']);
         assert.equal(await page.locator('#email-address').inputValue(),'');
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#email-dialog').evaluate(e=>e.open),false);
@@ -114,5 +115,5 @@ try {
       assert.doesNotMatch(html,/application\/ld\+json|rel="canonical"/);
     }
   });
-  await writeFile(`${output}/browser-results.json`,JSON.stringify({base,passed:results.length,checks:results,signup:'Validation/preview only. No subscriber provider configured; no real subscription claimed.'},null,2)+'\n');
+  await writeFile(`${output}/browser-results.json`,JSON.stringify({base,passed:results.length,checks:results,signup:'API success mocked; no live MongoDB persistence verified.'},null,2)+'\n');
 } finally { await browser.close(); }
