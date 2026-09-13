@@ -9,7 +9,7 @@ export const festival = {
 } as const;
 export const copy = {
  es: {
-  essence:'La magia de coincidir.', festivalLabel:'EL FESTIVAL', dates:'19–20 de febrero de 2027', location:'Playa Venao, Panamá',
+  essence:'Un festival de música house con raíces en Playa Venao.', festivalLabel:'EL FESTIVAL', dates:'19–20 de febrero de 2027', location:'Playa Venao, Panamá',
   countdown:'El lineup y las entradas llegan en', units:['Días','Horas','Minutos','Segundos'], releaseDate:'1 de octubre de 2026',
   releaseTime:'1 de octubre de 2026, 00:00, hora de Panamá (UTC−5).', pending:'Próximamente, todos los detalles.', releaseHeading:'Lineup y entradas',
   description:'ELEMENTA ORIGINS 2027 en Playa Venao, Panamá. 19–20 de febrero. Lineup, entradas, itinerario e información del festival: 1 de octubre de 2026.',
@@ -22,7 +22,7 @@ export const copy = {
   noScript:'Activa JavaScript para abrir la vista previa de suscripción.', back:'Volver a ELEMENTA',
  },
  en: {
-  essence:'The magic of coming together.', festivalLabel:'THE FESTIVAL', dates:'February 19–20, 2027', location:'Playa Venao, Panama',
+  essence:'A house music festival rooted in Playa Venao.', festivalLabel:'THE FESTIVAL', dates:'February 19–20, 2027', location:'Playa Venao, Panama',
   countdown:'Lineup & tickets release in', units:['Days','Hours','Minutes','Seconds'], releaseDate:'October 1, 2026',
   releaseTime:'October 1, 2026, 00:00, Panama time (UTC−5).', pending:'Full details coming soon.', releaseHeading:'Lineup & tickets',
   description:'ELEMENTA ORIGINS 2027 in Playa Venao, Panama. February 19–20. Lineup, tickets, itinerary and festival information: October 1, 2026.',
