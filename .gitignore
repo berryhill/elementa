@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.env*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+.vercel/
+# Local-only research, source custody and verification artifacts.
+.hermes.md
+.hermes/
+docs/

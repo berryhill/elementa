@@ -1,0 +1,1 @@
+export default function NotFound(){return <main className="document-page"><h1>404</h1><p>Página no encontrada · Page not found</p><a href="/es">ELEMENTA — Español</a> · <a href="/en">English</a></main>;}
