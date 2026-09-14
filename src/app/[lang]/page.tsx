@@ -33,7 +33,7 @@ export default async function Landing({params}:{params:Promise<{lang:string}>}) 
       </div>
     </div></main>
     <SectionEntrance />
-    <footer><a id="photo-credit" href={`/${lang}/credits`}>{t.credit}</a><span id="motion-slot"/></footer>
+    <footer><a id="photo-credit" href={`/${lang}/credits`}>{t.credit}</a></footer>
     {indexable && origin && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:serializeJsonLd({'@context':'https://schema.org','@type':'WebSite','@id':`${origin}/#website`,name:festival.officialName,url:origin,inLanguage:supportedLocales})}}/>}
   </>;
 }

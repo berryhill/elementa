@@ -19,7 +19,8 @@ try {
         page.on('pageerror', e => errors.push(e.message));
         page.on('console', m => { if(m.type()==='error') errors.push(m.text()); });
         assert.equal((await page.goto(`${base}/${lang}`)).status(),200);
-        await page.locator('#motion').waitFor();
+        await page.locator('body.motion-enabled, body.no-motion').waitFor();
+        assert.equal(await page.locator('#motion, #motion-slot').count(),0);
         assert.equal(await page.locator('html').getAttribute('lang'),lang);
         assert.match(await page.title(),/ELEMENTA.*ORIGINS/);
         assert.match(await page.locator('meta[name=robots]').getAttribute('content'),/noindex/);
@@ -61,16 +62,13 @@ try {
       });
     }
   }
-  await check('pause/resume and expiry in both languages using controlled browser clock', async()=>{
+  await check('expiry without a motion button in both languages using controlled browser clock', async()=>{
     for(const lang of ['es','en']) {
       const context=await browser.newContext(); const page=await context.newPage();
       await page.clock.install({time:new Date('2026-09-30T23:59:57-05:00')});
-      await page.goto(`${base}/${lang}`); await page.locator('#motion').waitFor();
-      await page.locator('#motion').click();
-      const frozen=await page.locator('#countdown').innerText();
+      await page.goto(`${base}/${lang}`); await page.locator('body.motion-enabled, body.no-motion').waitFor();
+        assert.equal(await page.locator('#motion, #motion-slot').count(),0);
       await page.clock.fastForward(5000);
-      assert.equal(await page.locator('#countdown').innerText(),frozen);
-      await page.locator('#motion').click();
       await page.locator('#release-state').waitFor();
       assert.equal(await page.locator('#countdown').count(),0);
       assert.equal(await page.locator('#countdown-label').innerText(),lang==='es'?'Lineup y entradas':'Lineup & tickets');
@@ -80,7 +78,8 @@ try {
   });
   await check('reduced motion freezes ambient animation and countdown',async()=>{
     const context=await browser.newContext({reducedMotion:'reduce'});const page=await context.newPage();
-    await page.goto(`${base}/en`);await page.locator('#motion').waitFor();
+    await page.goto(`${base}/en`);await page.locator('body.motion-enabled, body.no-motion').waitFor();
+        assert.equal(await page.locator('#motion, #motion-slot').count(),0);
     assert.equal(await page.locator('body').evaluate(e=>e.classList.contains('no-motion')),true);
     assert.equal(await page.locator('#coast').evaluate(e=>getComputedStyle(e).animationName),'none');
     const before=await page.locator('#countdown').innerText();await page.waitForTimeout(1200);
