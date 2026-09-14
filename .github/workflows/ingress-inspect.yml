@@ -1,0 +1,23 @@
+name: Inspect Elementa ingress
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main' && github.repository == 'berryhill/elementa'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        with:
+          version: v1.32.3
+      - run: python3 -m pip install PyYAML==6.0.2
+      - name: Read ingress and backend status without credentials
+        env:
+          LINODE_KUBECONFIG: ${{ secrets.LINODE_KUBECONFIG }}
+        run: python3 scripts/inspect_ingress.py
