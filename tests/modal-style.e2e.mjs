@@ -65,9 +65,9 @@ try {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
     });
     await page.locator('.email-submit').click();
-    await expect(dialog.locator('[role=status]')).toContainText(lang === 'es' ? 'Tu suscripción está guardada' : 'Your subscription is saved');
+    await expect(dialog.locator('.email-success #email-title')).toContainText(lang === 'es' ? 'Te hemos añadido a nuestra lista de correo' : 'You have been added to our mailing list');
     assert.deepEqual(payload, { email: 'qa@example.invalid', locale: lang, consent: true });
-    await expect(email).toHaveValue('');
+    await expect(dialog.locator('form')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     await expect(page.locator('#email-open')).toBeFocused();

@@ -52,9 +52,9 @@ try {
         await page.route('**/api/signup', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true})}));
         page.on('request', r=>{if(['fetch','xhr'].includes(r.resourceType()))requests.push(r.url());});
         await page.locator('.email-submit').click();
-        await expect(page.locator('#email-dialog [role=status]')).toContainText(lang==='es'?'Tu suscripción está guardada':'Your subscription is saved');
+        await expect(page.locator('.email-success #email-title')).toContainText(lang==='es'?'Te hemos añadido a nuestra lista de correo':'You have been added to our mailing list');
         assert.deepEqual(requests,[base+'/api/signup']);
-        assert.equal(await page.locator('#email-address').inputValue(),'');
+        assert.equal(await page.locator('#email-dialog form').count(),0);
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#email-dialog').evaluate(e=>e.open),false);
         assert.equal(await page.locator('#email-open').evaluate(e=>e===document.activeElement),true);

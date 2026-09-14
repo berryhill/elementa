@@ -33,8 +33,15 @@ try {
     await submit.click();
     await expect.poll(() => count).toBe(2);
     await held.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
-    await expect(status).toContainText(lang === 'es' ? 'Tu suscripción está guardada' : 'Your subscription is saved');
+    const successTitle = page.locator('.email-success #email-title');
+    await expect(successTitle).toContainText(lang === 'es' ? 'Te hemos añadido a nuestra lista de correo' : 'You have been added to our mailing list');
+    await expect(page.locator('#email-dialog form')).toHaveCount(0);
+    await expect(successTitle).toBeFocused();
+    await page.locator('.email-success button').click();
+    await expect(page.locator('#email-open')).toBeFocused();
+    await page.locator('#email-open').click();
     await expect(email).toHaveValue('');
+    await expect(email).toBeFocused();
     // A closed request must not overwrite a newly opened dialog.
     await email.fill('old@example.invalid');
     await page.locator('input[type=checkbox]').check();
