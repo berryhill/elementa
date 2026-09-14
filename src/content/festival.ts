@@ -18,7 +18,7 @@ export const copy = {
   cta:'Quiero recibir novedades', signupTitle:'Sigue cerca de ELEMENTA.', intro:'Recibe el lineup, la apertura de entradas, las novedades del festival y las promociones en tu correo.',
   email:'Correo electrónico', consent:'Me interesa recibir novedades de ELEMENTA sobre el lineup, las entradas, el festival y las promociones.',
   privacy:'Al suscribirte, guardamos tu correo, idioma y consentimiento para enviarte novedades y promociones de ELEMENTA. No guardamos tu dirección IP con la suscripción.',
-  submit:'Unirme a la lista', close:'Cerrar', result:'Tu suscripción está guardada. Gracias por seguir cerca de ELEMENTA.',
+  submit:'Unirme a la lista', close:'Cerrar', result:'Te hemos añadido a nuestra lista de correo.', thanks:'Gracias por seguir cerca de ELEMENTA.',
   sending:'Enviando…', error:'No pudimos confirmar tu suscripción. Inténtalo de nuevo.',
   noScript:'Activa JavaScript para abrir el formulario de suscripción.', back:'Volver a ELEMENTA',
  },
@@ -32,7 +32,7 @@ export const copy = {
   cta:'Keep me updated', signupTitle:'Stay close to ELEMENTA.', intro:'Get the lineup, ticket release, festival news and promotions in your inbox.',
   email:'Email address', consent:'I am interested in ELEMENTA lineup and ticket updates, festival news and promotions.',
   privacy:'When you subscribe, we store your email, language and consent for ELEMENTA updates and promotions. We do not store your IP address with your subscription.',
-  submit:'Join the list', close:'Close', result:'Your subscription is saved. Thanks for staying close to ELEMENTA.',
+  submit:'Join the list', close:'Close', result:'You have been added to our mailing list.', thanks:'Thanks for staying close to ELEMENTA.',
   sending:'Sending…', error:'We could not confirm your subscription. Please try again.',
   noScript:'Enable JavaScript to open the signup form.', back:'Back to ELEMENTA',
  }
