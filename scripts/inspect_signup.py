@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
-from deploy import selected_kubeconfig, kube, failure_message
+from deploy import selected_kubeconfig, kube, run, failure_message
 
 PROBE = r"""
 const {MongoClient} = require('mongodb');
@@ -37,6 +37,13 @@ const {MongoClient} = require('mongodb');
 def inspect():
     with tempfile.TemporaryDirectory(prefix='elementa-signup-') as directory:
         with selected_kubeconfig(Path(directory), os.environ['LINODE_KUBECONFIG']):
+            # Discover existing database service identities only; never read Secrets
+            # or enumerate database contents. A candidate is not authorization to use it.
+            services = json.loads(run('kubectl','--request-timeout=30s','get','services','-A','-o','json'))
+            candidates = [{'namespace': s['metadata']['namespace'], 'name': s['metadata']['name'],
+                           'ports': [p['port'] for p in s['spec'].get('ports', [])]}
+                          for s in services['items'] if any(p.get('port') == 27017 for p in s['spec'].get('ports', []))]
+            print('MONGODB_SERVICE_CANDIDATES ' + json.dumps(candidates), flush=True)
             pods = json.loads(kube('get','pods','-l','app.kubernetes.io/instance=elementa','-o','json'))
             for pod in pods['items']:
                 if pod.get('status',{}).get('phase') != 'Running':
