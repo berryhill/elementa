@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { copy, festival, type Locale } from '@/content/festival';
 import { countdownValues } from '@/lib/countdown';
 
@@ -11,13 +10,11 @@ export default function Countdown({ lang, initialValues }: { lang: Locale; initi
   // No-JS visitors receive real numbers (or the truthful expired state), not dashes.
   const [values, setValues] = useState<string[] | null>(initialValues);
   const [paused, setPaused] = useState<boolean | null>(null);
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     setValues(countdownValues(festival.announcementAt, Date.now()));
     setPaused(media.matches);
-    setSlot(document.getElementById('motion-slot'));
     // A new reduced-motion request always stops updates; removing it must not
     // override a visitor's explicit pause.
     const update = () => { if (media.matches) setPaused(true); };
@@ -59,10 +56,5 @@ export default function Countdown({ lang, initialValues }: { lang: Locale; initi
         <div><span className="digit">{value}</span><span className="unit">{t.units[i]}</span></div>
       </Fragment>)}
     </div> : <p id="release-state" role="status">{t.pending}</p>}
-    {slot && paused !== null && createPortal(
-      <button type="button" id="motion" aria-label={paused ? `${t.resume}: ${t.resumeLabel}` : t.pauseLabel} onClick={() => setPaused(p => !p)}>
-        <span className="motion-icon" aria-hidden="true">{paused ? '▷' : 'Ⅱ'}</span>
-        <span>{paused ? t.resume : t.pause}</span>
-      </button>, slot)}
   </>;
 }
