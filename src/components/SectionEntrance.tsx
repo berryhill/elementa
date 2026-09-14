@@ -18,14 +18,14 @@ export default function SectionEntrance() {
       // Countdown owns motion readiness; its initial hydration need not run first.
       if (attempted || !document.body.classList.contains('motion-enabled')) return;
       attempted = true;
-      const tide = document.querySelector<HTMLElement>('.world .tide');
+      const coast = document.querySelector<HTMLElement>('.world #coast');
       try {
-        // Only opacity: leave the existing CSS tide transform loop untouched.
-        animation = tide?.animate?.([
-          { opacity: 0.3, offset: 0 },
-          { opacity: 0.42, offset: 0.4 },
-          { opacity: 0.3, offset: 1 },
-        ], { duration: 1100, easing: 'cubic-bezier(.2,.7,.2,1)', iterations: 1 });
+        // Focus only the decorative image; preserve its CSS breathe transform,
+        // the parent's color grading, and all already-visible foreground content.
+        animation = coast?.animate?.([
+          { filter: 'blur(3px)', opacity: 0.85 },
+          { filter: 'blur(0px)', opacity: 1 },
+        ], { duration: 1200, easing: 'cubic-bezier(.2,.7,.2,1)', iterations: 1 });
       } catch {
         cancel(); // Unsupported motion leaves the unchanged static background.
       }
