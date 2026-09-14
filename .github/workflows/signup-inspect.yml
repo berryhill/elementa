@@ -1,6 +1,11 @@
 name: Inspect Elementa signup
 on:
   workflow_dispatch:
+    inputs:
+      verify_signup:
+        description: Verify and remove only the reserved issue-21 synthetic test subscriber
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -17,7 +22,8 @@ jobs:
         with:
           version: v1.32.3
       - run: python3 -m pip install PyYAML==6.0.2
-      - name: Read-only database connectivity and configuration diagnosis
+      - name: Database diagnosis or explicitly requested synthetic verification
         env:
+          VERIFY_SIGNUP: ${{ inputs.verify_signup }}
           LINODE_KUBECONFIG: ${{ secrets.LINODE_KUBECONFIG }}
         run: python3 scripts/inspect_signup.py

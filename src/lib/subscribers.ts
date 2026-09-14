@@ -10,6 +10,7 @@ async function database() {
     const uri = process.env.MONGODB_URI;
     if (!uri) throw new Error('Signup unavailable');
     const client = new MongoClient(uri, {
+      ...(process.env.MONGODB_AUTH_SOURCE ? { authSource: process.env.MONGODB_AUTH_SOURCE } : {}),
       maxPoolSize: 5, minPoolSize: 0, serverSelectionTimeoutMS: 3000,
       connectTimeoutMS: 3000, socketTimeoutMS: 5000, waitQueueTimeoutMS: 3000,
     });

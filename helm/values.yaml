@@ -32,6 +32,9 @@ site:
   announcementInstantApproved: false
 # Reference an existing Secret; never place credential values in Helm values.
 existingEnvSecret: ""
+# The deployed credential is authenticated in admin; data stays in elementa.
+# Empty string preserves the authSource supplied by MONGODB_URI.
+mongodbAuthSource: "admin"
 resources:
   requests:
     cpu: 100m

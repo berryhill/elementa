@@ -19,6 +19,10 @@ TLS ingress remains enabled for elementafestival.com with elementa-tls. Preview/
 
 The kubeconfig uses a temporary mode-0600 file. Secret payloads pass to kubectl on stdin, never command arguments or Helm values; subprocess errors suppress credential-bearing output. Each deployment creates an immutable runtime Secret snapshot so Helm rollback keeps the prior runtime binding. Retained snapshots are not automatically garbage-collected; remove only snapshots no retained revision or live pod references. Namespace provisioning preserves existing fields and rejects conflicting ownership.
 
+## MongoDB authentication database
+
+The production credential was verified to authenticate in `admin`, while subscriber data remains in `elementa.subscribers`. Helm sets the non-secret `mongodbAuthSource: admin`, projected as `MONGODB_AUTH_SOURCE`; the driver explicitly uses this over any conflicting URI query. No credentials are changed or logged. For a future user created in another authentication database, change that Helm value with the credential rollout. Set it to an empty string to use the URI authSource without an override.
+
 ## Deploy behavior
 
 `python3 scripts/deploy.py` needs Python/PyYAML, kubectl, Helm 3, the above secrets, `RELEASE_SHA` and `IMAGE_DIGEST`. It provisions the namespace/pull/runtime Secrets and runs Helm upgrade/install with `--reset-values --atomic --wait --timeout 5m`.
