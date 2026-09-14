@@ -4,15 +4,15 @@ export function isLocale(value: string): value is Locale { return value === 'es'
 export const festival = {
   officialName: 'ELEMENTA', editionName: 'ORIGINS 2027',
   festivalStartDate: '2027-02-19', festivalEndDate: '2027-02-20',
-  announcementAt: '2026-10-01T00:00:00-05:00', announcementTimeZone: 'America/Panama',
+  announcementAt: '2026-10-15T00:00:00-05:00', announcementTimeZone: 'America/Panama',
   venue: null, organizer: null, ticketUrl: null, ticketStatus: 'unreleased',
 } as const;
 export const copy = {
  es: {
   essence:'Un festival de música electrónica con raíces en Playa Venao, Panamá.', festivalLabel:'EL FESTIVAL', dates:'19–20 de febrero de 2027', location:'Playa Venao, Panamá',
-  countdown:'El lineup y las entradas llegan en', units:['Días','Horas','Minutos','Segundos'], releaseDate:'1 de octubre de 2026',
-  releaseTime:'1 de octubre de 2026, 00:00, hora de Panamá (UTC−5).', pending:'Próximamente, todos los detalles.', releaseHeading:'Lineup y entradas',
-  description:'Música electrónica junto al Pacífico. 19–20 de febrero de 2027. Lineup y entradas: 1 de octubre.',
+  countdown:'El lineup y las entradas llegan en', units:['Días','Horas','Minutos','Segundos'], releaseDate:'15 de octubre de 2026',
+  releaseTime:'15 de octubre de 2026, 00:00, hora de Panamá (UTC−5).', pending:'Próximamente, todos los detalles.', releaseHeading:'Lineup y entradas',
+  description:'Música electrónica junto al Pacífico. 19–20 de febrero de 2027. Lineup y entradas: 15 de octubre.',
   language:'Idioma', credit:'Fotografía', pause:'Pausar movimiento', resume:'Activar movimiento',
   pauseLabel:'Pausar movimiento y actualizaciones del contador', resumeLabel:'Reanudar movimiento y contador',
   cta:'Quiero recibir novedades', signupTitle:'Sigue cerca de ELEMENTA.', intro:'Recibe el lineup, la apertura de entradas, las novedades del festival y las promociones en tu correo.',
@@ -24,9 +24,9 @@ export const copy = {
  },
  en: {
   essence:'An electronic music festival rooted in Playa Venao, Panama.', festivalLabel:'THE FESTIVAL', dates:'February 19–20, 2027', location:'Playa Venao, Panama',
-  countdown:'Lineup & tickets release in', units:['Days','Hours','Minutes','Seconds'], releaseDate:'October 1, 2026',
-  releaseTime:'October 1, 2026, 00:00, Panama time (UTC−5).', pending:'Full details coming soon.', releaseHeading:'Lineup & tickets',
-  description:'Electronic music by the Pacific. February 19–20, 2027. Lineup and tickets: October 1.',
+  countdown:'Lineup & tickets release in', units:['Days','Hours','Minutes','Seconds'], releaseDate:'October 15, 2026',
+  releaseTime:'October 15, 2026, 00:00, Panama time (UTC−5).', pending:'Full details coming soon.', releaseHeading:'Lineup & tickets',
+  description:'Electronic music by the Pacific. February 19–20, 2027. Lineup and tickets: October 15.',
   language:'Language', credit:'Photography', pause:'Pause motion', resume:'Enable motion',
   pauseLabel:'Pause motion and countdown updates', resumeLabel:'Resume motion and countdown',
   cta:'Keep me updated', signupTitle:'Stay close to ELEMENTA.', intro:'Get the lineup, ticket release, festival news and promotions in your inbox.',
