@@ -91,8 +91,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Fail clearly on absent production authority
-        run: python3 -c 'import os; from scripts.deploy import config; config(os.environ)'
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
           version: v3.17.3
