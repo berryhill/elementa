@@ -15,7 +15,12 @@ const {MongoClient} = require('mongodb');
  if(!uri) return;
  let client;
  try {
-  client = new MongoClient(uri,{serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000});
+  const target = new URL(uri);
+  if (['127.0.0.1','localhost','[::1]'].includes(target.hostname)) {
+    target.hostname = 'mongo-mongodb-headless.default.svc.cluster.local';
+    console.log(JSON.stringify({probeOnlyRetarget:true}));
+  }
+  client = new MongoClient(target.toString(),{serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000});
   console.log(JSON.stringify({endpoints:client.options.hosts.map(h=>({host:h.host,port:h.port})),directConnection:client.options.directConnection}));
   await client.connect();
   console.log(JSON.stringify({connection:'ok'}));
