@@ -16,6 +16,7 @@ const {MongoClient} = require('mongodb');
  let client;
  try {
   client = new MongoClient(uri,{serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000});
+  console.log(JSON.stringify({endpoints:client.options.hosts.map(h=>({host:h.host,port:h.port})),directConnection:client.options.directConnection}));
   await client.connect();
   console.log(JSON.stringify({connection:'ok'}));
   await client.db('elementa').command({ping:1});
