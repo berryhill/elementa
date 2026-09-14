@@ -129,6 +129,57 @@ body[data-phase=coast] .veil,body[data-phase=people] .veil{opacity:.65}
 
 #email-cta{margin-top:22px;text-align:center}#email-open,.email-submit{border:1px solid #eee1c2aa;color:#eee1c2;background:transparent;padding:13px 24px;border-radius:2px;font:inherit;font-size:12px;letter-spacing:.06em;cursor:pointer;min-height:44px}#email-open:hover,.email-submit:hover{background:#eee1c21a}#email-dialog{position:fixed;inset:0;margin:auto;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #eee1c240;border-radius:6px;background:#101c1b;color:#eee1c2;padding:36px 30px;box-shadow:0 20px 100px #0009;font-family:Arial,sans-serif;text-align:left}#email-dialog::backdrop{background:#030908bb;backdrop-filter:blur(7px)}#email-dialog *{box-sizing:border-box}#email-dialog h2{font-size:25px;font-weight:400;line-height:1.2;margin:8px 20px 14px 0;letter-spacing:-.02em;text-transform:none}#email-dialog p{line-height:1.6;font-size:14px;margin:0 0 20px;letter-spacing:normal}#email-dialog .email-close{position:absolute;right:12px;top:10px;min-height:44px;min-width:44px;border:0;color:inherit;background:none;font-size:26px;cursor:pointer}#email-dialog label.email-label{display:block;font-size:12px;margin:0 0 8px}#email-address{display:block;width:100%;min-height:48px;padding:12px;border:1px solid #eee1c270;border-radius:2px;background:#ffffff08;color:inherit;font-size:16px}#email-dialog .email-consent{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;margin:18px 0 12px}#email-dialog input[type=checkbox]{flex:0 0 auto;margin-top:3px;width:18px;height:18px;accent-color:#eee1c2}#email-dialog .email-privacy,#email-dialog .email-preview{font-size:11px;line-height:1.6;color:#eee1c2b8;margin-bottom:16px}#email-dialog .email-preview{padding:10px;border:1px solid #eee1c22a}#email-dialog .email-submit{width:100%;background:#eee1c2;color:#101c1b}#email-dialog [role=status]{margin:16px 0 0;font-size:12px}#email-dialog [role=status]:empty{display:none}#email-dialog :focus-visible,#email-open:focus-visible{outline:2px solid #eee1c2;outline-offset:4px}@media(max-width:450px){#email-dialog{padding:30px 22px}#email-cta{margin-top:16px}}
 
+/* Signup continues the landing's sand-on-ink invitation, without changing its CTA.
+   Keep all overrides dialog-scoped so the resting composition stays untouched. */
+#email-dialog{
+  width:min(440px,calc(100vw - 32px));
+  padding:40px 32px 32px;
+  border:1px solid color-mix(in srgb,var(--sand) 35%,transparent);
+  border-radius:2px;
+  background:var(--ink);
+  color:var(--sand-light);
+  font-family:var(--ui-font);
+  box-shadow:0 24px 80px #0008;
+}
+#email-dialog::backdrop{background:#060707b3;backdrop-filter:blur(4px)}
+#email-dialog h2{
+  margin:0 24px 16px 0;
+  max-width:none;
+  font-family:var(--voice-font);
+  font-size:25px;
+  font-weight:400;
+  line-height:var(--voice-line);
+  letter-spacing:.015em;
+  color:var(--sand-light);
+  text-wrap:balance;
+}
+#email-dialog p{font-size:14px;line-height:1.65;margin-bottom:24px}
+#email-dialog #email-intro{color:var(--sage)}
+#email-dialog .email-close{top:8px;right:8px;color:var(--sand);font-weight:300}
+#email-dialog .email-close:hover{background:color-mix(in srgb,var(--sand) 8%,transparent)}
+#email-dialog label.email-label{font-size:12px;letter-spacing:.045em;margin-bottom:10px;color:var(--sand)}
+#email-dialog #email-address{
+  border-color:color-mix(in srgb,var(--sand) 50%,transparent);
+  background:color-mix(in srgb,var(--sand) 4%,var(--ink));
+  color:var(--sand-light);
+  font-family:var(--ui-font);
+}
+#email-dialog .email-consent{margin:20px 0 14px;line-height:1.65}
+#email-dialog input[type=checkbox]{accent-color:var(--sand)}
+#email-dialog .email-privacy{font-size:12px;line-height:1.65;color:var(--sage);margin-bottom:24px}
+#email-dialog .email-submit{
+  min-height:46px;
+  border:1px solid color-mix(in srgb,var(--sand) 67%,transparent);
+  background:transparent;
+  color:var(--sand);
+  font-family:var(--ui-font);
+  letter-spacing:.06em;
+}
+#email-dialog .email-submit:hover:not(:disabled){background:color-mix(in srgb,var(--sand) 10%,transparent)}
+#email-dialog [role=status]{color:var(--sand-light);line-height:1.65}
+#email-dialog :focus-visible{outline:2px solid var(--sand);outline-offset:4px}
+@media(max-width:450px){#email-dialog{padding:36px 24px 26px}#email-dialog h2{font-size:23px}}
+
 /* Next.js port: preserve accepted resting composition and provide real locale links. */
 header .languages{margin-left:auto}
 .languages a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 9px;font-size:11px;letter-spacing:.08em;color:var(--sand);opacity:.7;text-decoration:none}

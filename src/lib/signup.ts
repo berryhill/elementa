@@ -1,5 +1,5 @@
 // Transport/domain logic kept independent of MongoDB for deterministic tests.
-export const CONSENT_VERSION = 'elementa-updates-v1';
+export const CONSENT_VERSION = 'elementa-updates-promotions-v2';
 export type Subscriber = {
   email: string; locale: 'es' | 'en'; consent: true;
   consentVersion: string; createdAt: Date;

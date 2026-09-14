@@ -4,6 +4,7 @@ import {headers} from 'next/headers';
 import {isLocale} from '@/content/festival';
 import {defaultLocale,localeHeader} from '@/lib/localization';
 import {getSiteConfig} from '@/lib/site';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
 import './globals.css';
 // Valid pages override this title. Unmatched routes and rejected locales inherit
 // a useful server-rendered error title without client-side document mutations.
@@ -17,5 +18,5 @@ export default async function RootLayout({children}:{children:ReactNode}) {
  // Browser extensions can add root attributes (e.g. analytics opt-out) before
  // hydration. Preserve those user-owned markers and tolerate root-only drift;
  // descendant hydration diagnostics remain enabled. Locale stays server-owned.
- return <html lang={lang} suppressHydrationWarning><body data-phase="rest">{children}</body></html>;
+ return <html lang={lang} suppressHydrationWarning><body data-phase="rest">{children}<GoogleAnalytics /></body></html>;
 }
