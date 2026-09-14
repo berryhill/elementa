@@ -34,7 +34,16 @@ export function localizedMetadata({lang,title,description,origin,indexable,page=
   const publicLanding = indexable && page === 'landing';
   if (publicLanding && !origin) throw new Error('Indexable metadata requires an approved origin');
   const publicOrigin = publicLanding ? origin : undefined;
-  const displayTitle = indexable ? title : `${title} — ${lang === 'es' ? 'Vista previa' : 'Preview'}`;
+  // Sharing approved artwork is independent of permission to index the site.
+  const shareOrigin = page === 'landing' ? origin : undefined;
+  const image = shareOrigin ? {
+    url: `${shareOrigin}/assets/elementa-social-${lang}-v1.jpg`,
+    width: 1200, height: 630, type: 'image/jpeg',
+    alt: lang === 'es'
+      ? 'ELEMENTA ORIGINS 2027 · 19–20 de febrero de 2027 · Playa Venao, Panamá'
+      : 'ELEMENTA ORIGINS 2027 · February 19–20, 2027 · Playa Venao, Panama',
+  } : undefined;
+  const displayTitle = title;
   return {
     title: displayTitle, description,
     robots: {index: publicLanding, follow: publicLanding},
@@ -44,13 +53,11 @@ export function localizedMetadata({lang,title,description,origin,indexable,page=
     } : {}),
     openGraph: {
       title: displayTitle, description, type: 'website',
-      ...(publicOrigin ? {
-        url: `${publicOrigin}/${lang}`,
-        images: [{url: `${publicOrigin}/assets/elementa-wordmark.png`, alt: 'ELEMENTA'}],
-      } : {}),
+      locale: lang === 'es' ? 'es_PA' : 'en_US', siteName: 'ELEMENTA',
+      ...(shareOrigin && image ? {url: `${shareOrigin}/${lang}`, images: [image]} : {}),
     },
-    twitter: {card: 'summary', title: displayTitle, description,
-      ...(publicOrigin ? {images: [`${publicOrigin}/assets/elementa-wordmark.png`]} : {}),
+    twitter: {card: 'summary_large_image', title: displayTitle, description,
+      ...(image ? {images: [{url: image.url, alt: image.alt}]} : {}),
     },
   };
 }

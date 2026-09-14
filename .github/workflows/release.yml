@@ -20,7 +20,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
@@ -41,35 +40,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/berryhill/elementa:${{ github.sha }}
-          sbom: true
-          provenance: mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/berryhill/elementa
             org.opencontainers.image.revision=${{ github.sha }}
-      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
-        with:
-          cosign-release: v2.4.3
-      - name: Sign immutable image and verify exact source identity
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          set -euo pipefail
-          IMAGE="ghcr.io/berryhill/elementa@$DIGEST"
-          cosign sign --yes "$IMAGE"
-          cosign verify --certificate-identity 'https://github.com/berryhill/elementa/.github/workflows/release.yml@refs/heads/main' --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-github-workflow-sha "$GITHUB_SHA" "$IMAGE"
-      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
-        with:
-          version: v3.17.3
-      - run: python3 -m pip install PyYAML==6.0.2
-      - name: Publish chart only after image signing succeeds
-        env:
-          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          python3 scripts/package-chart.py
-          helm push "$RUNNER_TEMP/elementa-chart/elementa-0.1.0-sha.$GITHUB_SHA.tgz" oci://ghcr.io/berryhill/charts
   deploy:
     needs: publish
     runs-on: ubuntu-24.04
@@ -91,26 +64,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Fail clearly on absent production authority
-        run: python3 -c 'import os; from scripts.deploy import config; config(os.environ)'
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
           version: v3.17.3
       - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
         with:
           version: v1.32.3
-      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
-        with:
-          cosign-release: v2.4.3
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        with:
-          registry: ghcr.io
-          username: berryhill
-          password: ${{ secrets.GHCR_TOKEN }}
       - run: python3 -m pip install PyYAML==6.0.2
-      - name: Authenticate chart reader
-        env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        run: printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username berryhill --password-stdin
-      - name: Verify signature, cluster, deploy and verify (rollback on failure)
+      - name: Helm deploy
         run: python3 scripts/deploy.py

@@ -31,13 +31,14 @@ test('both preview locales omit all public discovery URLs even with an origin',(
   for(const lang of supportedLocales) for(const origin of [undefined,'https://example.org']) {
     const metadata=landingMetadata(lang,getSiteConfig({SITE_ORIGIN:origin,NODE_ENV:'production'}));
     assert.deepEqual(metadata.robots,{index:false,follow:false});
-    assert.match(metadata.title,lang==='es'?/Vista previa$/:/Preview$/);
+    assert.doesNotMatch(metadata.title,/Vista previa|Preview/);
     assert.equal(metadata.description,copy[lang].description);
     assert.equal(metadata.metadataBase,undefined);
     assert.equal(metadata.alternates,undefined);
-    assert.equal(metadata.openGraph.url,undefined);
-    assert.equal(metadata.openGraph.images,undefined);
-    assert.equal(metadata.twitter.images,undefined);
+    assert.equal(metadata.openGraph.url,origin ? `${origin}/${lang}` : undefined);
+    assert.equal(metadata.openGraph.images?.[0].url,origin ? `${origin}/assets/elementa-social-${lang}-v1.jpg` : undefined);
+    assert.equal(metadata.twitter.images?.[0].url,metadata.openGraph.images?.[0].url);
+    assert.equal(metadata.twitter.card,'summary_large_image');
     assert.equal(metadata.openGraph.title,metadata.title);
     assert.equal(metadata.twitter.description,metadata.description);
   }
@@ -50,8 +51,11 @@ test('future public metadata helper has self canonicals and reciprocal alternate
     assert.equal(metadata.alternates.canonical,`/${lang}`);
     assert.deepEqual(metadata.alternates.languages,localeAlternates('https://example.org'));
     assert.equal(metadata.openGraph.url,`https://example.org/${lang}`);
-    assert.equal(metadata.openGraph.images[0].url,'https://example.org/assets/elementa-wordmark.png');
-    assert.equal(metadata.twitter.images[0],metadata.openGraph.images[0].url);
+    assert.equal(metadata.openGraph.images[0].url,`https://example.org/assets/elementa-social-${lang}-v1.jpg`);
+    assert.equal(metadata.openGraph.images[0].width,1200);
+    assert.equal(metadata.openGraph.images[0].height,630);
+    assert.equal(metadata.openGraph.images[0].type,'image/jpeg');
+    assert.equal(metadata.twitter.images[0].url,metadata.openGraph.images[0].url);
     assert.doesNotMatch(metadata.title,/Preview|Vista previa/);
   }
   assert.throws(()=>landingMetadata('es',{indexable:true}),/approved origin/);
