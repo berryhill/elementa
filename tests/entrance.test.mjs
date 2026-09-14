@@ -6,22 +6,23 @@ import { stripTypeScriptTypes } from 'node:module';
 
 const source = readFileSync(new URL('../src/components/SectionEntrance.tsx', import.meta.url), 'utf8');
 const code = stripTypeScriptTypes(source.replace("import { useEffect } from 'react';", '').replace('export default ', ''));
-function mount({ ready = true, reduced = false, unsupported = false } = {}) {
+function mount({ ready = true, reduced = false, unsupported = false, missing = false, noApi = false } = {}) {
   const classes = new Set(ready ? ['motion-enabled'] : []);
   const media = { matches: reduced, addEventListener(_, cb) { this.update = cb; }, removeEventListener() {} };
   const calls = []; let cancelled = 0, sync, cleanup;
-  const tide = { animate(frames, options) { if (unsupported) throw Error('unsupported'); calls.push({ frames, options }); return { cancel() { cancelled++; } }; } };
+  const coast = { animate(frames, options) { if (unsupported) throw Error('unsupported'); calls.push({ frames, options }); return { cancel() { cancelled++; } }; } };
   runInNewContext(`${code}; SectionEntrance();`, {
     useEffect(cb) { cleanup = cb(); }, window: { matchMedia: () => media },
-    document: { body: { classList: { contains: c => classes.has(c) } }, querySelector(selector) { assert.equal(selector, '.world .tide'); return tide; } },
+    document: { body: { classList: { contains: c => classes.has(c) } }, querySelector(selector) { assert.equal(selector, '.world #coast'); return missing ? null : noApi ? {} : coast; } },
     MutationObserver: class { constructor(cb) { sync = cb; } observe() {} disconnect() {} },
   });
   return { calls, classes, media, sync, cleanup, cancelled: () => cancelled };
 }
-test('arrival animates background opacity once, never text or CSS transforms', () => {
+test('arrival sharpens only the background once, never text or CSS transforms', () => {
   const m = mount(); assert.equal(m.calls.length, 1);
-  assert.equal(JSON.stringify(m.calls[0].frames), JSON.stringify([{ opacity: .3, offset: 0 }, { opacity: .42, offset: .4 }, { opacity: .3, offset: 1 }]));
-  assert.equal(m.calls[0].options.duration, 1100);
+  assert.equal(JSON.stringify(m.calls[0].frames), JSON.stringify([{ filter: 'blur(3px)', opacity: .85 }, { filter: 'blur(0px)', opacity: 1 }]));
+  assert.equal(m.calls[0].options.duration, 1200);
+  assert.equal(m.calls[0].options.iterations, 1);
   assert.equal(m.calls[0].options.fill, undefined);
   m.sync(); m.sync(); assert.equal(m.calls.length, 1); m.cleanup(); assert.equal(m.cancelled(), 1);
 });
@@ -37,3 +38,7 @@ test('initial and runtime reduced motion suppress arrival permanently', () => {
   runtime.media.matches = false; runtime.media.update(); assert.equal(runtime.calls.length, 1);
 });
 test('unsupported animation leaves static page usable', () => { const m = mount({ unsupported: true }); assert.equal(m.calls.length, 0); m.cleanup(); });
+for (const fallback of ['missing', 'noApi']) test(`${fallback} safely skips animation without replay`, () => {
+  const m = mount({ [fallback]: true }); m.sync(); m.cleanup();
+  assert.equal(m.calls.length, 0); assert.equal(m.cancelled(), 0);
+});
