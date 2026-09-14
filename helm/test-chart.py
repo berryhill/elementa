@@ -34,6 +34,12 @@ assert container['securityContext']['readOnlyRootFilesystem']
 assert container['securityContext']['capabilities']['drop'] == ['ALL']
 env = {item['name']: item['value'] for item in container['env']}
 assert env['SITE_STAGE'] == 'preview'
+assert env['MONGODB_AUTH_SOURCE'] == 'admin'
+for source in ['elementa', '']:
+    docs = render('image.tag=test', 'mongodbAuthSource='+source)
+    c = next(d for d in docs if d['kind']=='Deployment')['spec']['template']['spec']['containers'][0]
+    auth = {e['name']:e['value'] for e in c['env']}
+    assert auth.get('MONGODB_AUTH_SOURCE') == (source or None)
 assert env['SITE_ORIGIN'] == 'https://elementafestival.com'
 assert env['FESTIVAL_FACTS_APPROVED'] == env['ANNOUNCEMENT_INSTANT_APPROVED'] == 'false'
 assert container['startupProbe']['httpGet'] == {'path': '/es', 'port': 'http'}

@@ -119,6 +119,9 @@
         }
       }
     },
+    "mongodbAuthSource": {
+      "type": "string"
+    },
     "existingEnvSecret": {
       "type": "string"
     }

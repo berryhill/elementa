@@ -66,6 +66,10 @@ spec:
               value: {{ .Values.site.festivalFactsApproved | quote }}
             - name: ANNOUNCEMENT_INSTANT_APPROVED
               value: {{ .Values.site.announcementInstantApproved | quote }}
+            {{- if .Values.mongodbAuthSource }}
+            - name: MONGODB_AUTH_SOURCE
+              value: {{ .Values.mongodbAuthSource | quote }}
+            {{- end }}
           {{- if .Values.existingEnvSecret }}
           envFrom:
             - secretRef:
