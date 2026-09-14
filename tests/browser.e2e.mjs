@@ -7,13 +7,20 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:3107';
 const output = resolve('docs/verification');
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
+// Keep synthetic UI checks local: do not load analytics or send QA pageviews.
+async function newLocalContext(options = {}) {
+  const context = await browser.newContext(options);
+  await context.route('**/*', route => new URL(route.request().url()).origin === new URL(base).origin
+    ? route.continue() : route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  return context;
+}
 const results = [];
 async function check(name, fn) { await fn(); results.push(name); console.log('PASS', name); }
 try {
   for (const lang of ['es', 'en']) {
     for (const [width,height] of [[1440,1000],[390,844],[320,568],[844,390]]) {
       await check(`${lang} ${width}x${height}: layout, assets, metadata, dialog, navigation`, async () => {
-        const context = await browser.newContext({ viewport: {width,height} });
+        const context = await newLocalContext({ viewport: {width,height} });
         const page = await context.newPage();
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));
@@ -51,7 +58,9 @@ try {
         await page.keyboard.press('Escape');
         assert.equal(await page.locator('#email-dialog').evaluate(e=>e.open),false);
         assert.equal(await page.locator('#email-open').evaluate(e=>e===document.activeElement),true);
-        await page.locator('#photo-credit').click();
+        assert.equal(await page.locator('#photo-credit, footer, #motion, #motion-slot').count(),0);
+        assert.equal(await page.getByText(/^(Fotografía|Photography|Pausar movimiento|Pause motion)$/).count(),0);
+        await page.goto(`${base}/${lang}/credits`);
         assert.equal((await page.locator('html').getAttribute('lang')),lang);
         assert.match(await page.locator('main').innerText(),/CC BY-SA 3.0/);
         await page.locator(`main a[href="/${lang}"]`).click();
@@ -64,7 +73,7 @@ try {
   }
   await check('expiry without a motion button in both languages using controlled browser clock', async()=>{
     for(const lang of ['es','en']) {
-      const context=await browser.newContext(); const page=await context.newPage();
+      const context=await newLocalContext(); const page=await context.newPage();
       await page.clock.install({time:new Date('2026-09-30T23:59:57-05:00')});
       await page.goto(`${base}/${lang}`); await page.locator('body.motion-enabled, body.no-motion').waitFor();
         assert.equal(await page.locator('#motion, #motion-slot').count(),0);
@@ -77,7 +86,7 @@ try {
     }
   });
   await check('reduced motion freezes ambient animation and countdown',async()=>{
-    const context=await browser.newContext({reducedMotion:'reduce'});const page=await context.newPage();
+    const context=await newLocalContext({reducedMotion:'reduce'});const page=await context.newPage();
     await page.goto(`${base}/en`);await page.locator('body.motion-enabled, body.no-motion').waitFor();
         assert.equal(await page.locator('#motion, #motion-slot').count(),0);
     assert.equal(await page.locator('body').evaluate(e=>e.classList.contains('no-motion')),true);
@@ -86,7 +95,7 @@ try {
     assert.equal(await page.locator('#countdown').innerText(),before);await context.close();
   });
   await check('no-JavaScript pages and 404 recovery are server-rendered',async()=>{
-    const context=await browser.newContext({javaScriptEnabled:false});const page=await context.newPage();
+    const context=await newLocalContext({javaScriptEnabled:false});const page=await context.newPage();
     for(const lang of ['es','en']) {
       await page.goto(`${base}/${lang}`);
       assert.equal(await page.locator('html').getAttribute('lang'),lang);
