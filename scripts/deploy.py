@@ -25,15 +25,55 @@ PULL_SECRET = 'ghcr-pull'
 RUNTIME_SECRET = 'elementa-runtime'
 
 
+class DeploymentValidationError(ValueError):
+    """Only authored messages, never exception text or protected values."""
+
+
+class DeploymentCommandError(RuntimeError):
+    """Only fixed command-failure classifications."""
+
+
+def failure_message(error):
+    if type(error) in (DeploymentValidationError, DeploymentCommandError):
+        return str(error)
+    return 'Unclassified failure; raw details suppressed. Inspect the last deployment phase.'
+
+
+def command_failure(stderr):
+    # Never return matching lines or captures: stderr may echo Secret payloads.
+    text = stderr.lower()
+    for needles, message in (
+        (('unauthorized', 'you must be logged in'), 'authentication rejected; check credential validity'),
+        (('forbidden',), 'authorization denied; check required RBAC or registry package access'),
+        (('x509:', 'certificate signed by unknown authority'), 'TLS certificate validation failed; check trusted CA and endpoint'),
+        (('no such host',), 'DNS resolution failed; check endpoint and runner network access'),
+        (('connection refused', 'i/o timeout', 'context deadline exceeded'), 'network connection failed or timed out'),
+        (('notfound', 'not found'), 'required resource or artifact not found'),
+        (('current-context is not set',), 'kubeconfig current-context is not set'),
+        (('error loading config file',), 'kubeconfig could not be parsed or loaded'),
+        (('no matching signatures', 'no signatures found'), 'image signature verification failed'),
+    ):
+        if any(needle in text for needle in needles):
+            return 'Deployment command failed: ' + message
+    return 'Deployment command failed (unclassified; output suppressed)'
+
+
+def phase(name):
+    # Callers supply fixed source literals only, never resource/credential values.
+    print('Elementa deployment phase: ' + name, flush=True)
+
+
 def run(*args, payload=None):
     # Capture BOTH streams: API errors can echo request objects containing secrets.
     # Never include argv, input, output or the original subprocess exception in errors.
     try:
         result = subprocess.run(args, input=payload, text=True, capture_output=True, timeout=720)
-    except (OSError, subprocess.TimeoutExpired):
-        raise RuntimeError('Deployment command could not complete') from None
+    except subprocess.TimeoutExpired:
+        raise DeploymentCommandError('Deployment command exceeded its execution timeout') from None
+    except OSError:
+        raise DeploymentCommandError('Deployment command could not start; check installed tooling') from None
     if result.returncode:
-        raise RuntimeError('Deployment command failed (output suppressed)') from None
+        raise DeploymentCommandError(command_failure(result.stderr)) from None
     return result.stdout.strip()
 
 
@@ -54,11 +94,11 @@ def provision_namespace():
         obj = json.loads(raw)
         meta = obj['metadata']
         if not meta.get('resourceVersion') or meta.get('deletionTimestamp'):
-            raise ValueError('Namespace is terminating or lacks resourceVersion')
+            raise DeploymentValidationError('Namespace is terminating or lacks resourceVersion')
         verb = 'replace'  # Preserve all fields and enforce optimistic concurrency.
     labels = obj['metadata'].setdefault('labels', {})
     if labels.get('app.kubernetes.io/part-of', NAMESPACE) != NAMESPACE:
-        raise ValueError('Namespace belongs to another application')
+        raise DeploymentValidationError('Namespace belongs to another application')
     labels['app.kubernetes.io/part-of'] = NAMESPACE
     run('kubectl', '--request-timeout=30s', verb, '-f', '-', payload=json.dumps(obj))
 
@@ -80,7 +120,7 @@ def probe_database():
     try:
         kube('exec', 'deployment/elementa', '-c', 'elementa', '--', 'node', '-e', script)
     except Exception:
-        raise RuntimeError('Signup database connectivity probe failed (details suppressed)') from None
+        raise DeploymentCommandError('Signup database connectivity probe failed (details suppressed)') from None
 
 
 def provision_secrets(cfg, runtime_name):
@@ -103,10 +143,20 @@ def provision_secrets(cfg, runtime_name):
 @contextmanager
 def selected_kubeconfig(root, encoded):
     path = root / 'kubeconfig'
+    import yaml
+    # Support pasted provider YAML/JSON and standard base64 (including line wraps).
+    # Parse failures are untrusted and must never reach the deployment log.
     try:
-        content = base64.b64decode(encoded, validate=True)
+        content = base64.b64decode(re.sub(r'\s+', '', encoded), validate=True)
     except (ValueError, binascii.Error):
-        raise ValueError('LINODE_KUBECONFIG must be valid base64') from None
+        content = encoded.encode('utf-8')
+    try:
+        document = yaml.safe_load(content)
+        valid = isinstance(document, dict) and document.get('apiVersion') == 'v1' and document.get('kind') == 'Config'
+    except (yaml.YAMLError, UnicodeError, ValueError):
+        valid = False
+    if not valid:
+        raise DeploymentValidationError('LINODE_KUBECONFIG must be a v1 Config as raw YAML/JSON or valid base64') from None
     with open(path, 'xb', opener=lambda p, flags: os.open(p, flags, 0o600)) as stream:
         stream.write(content)
     previous = os.environ.get('KUBECONFIG')
@@ -129,15 +179,15 @@ def config(env):
                 'GHCR_TOKEN', 'RELEASE_SHA', 'IMAGE_DIGEST')
     missing = [key for key in required if not env.get(key)]
     if missing:
-        raise ValueError('Missing protected production configuration: ' + ', '.join(missing))
+        raise DeploymentValidationError('Missing protected production configuration: ' + ', '.join(missing))
     if not re.fullmatch(r'[0-9a-f]{40}', env['RELEASE_SHA']):
-        raise ValueError('RELEASE_SHA must be a full 40-character commit SHA')
+        raise DeploymentValidationError('RELEASE_SHA must be a full 40-character commit SHA')
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', env['IMAGE_DIGEST']):
-        raise ValueError('IMAGE_DIGEST must be immutable sha256 digest')
+        raise DeploymentValidationError('IMAGE_DIGEST must be immutable sha256 digest')
     if not env['MONGODB_URI'].startswith(('mongodb://', 'mongodb+srv://')):
-        raise ValueError('MONGODB_URI must use a MongoDB URI scheme')
+        raise DeploymentValidationError('MONGODB_URI must use a MongoDB URI scheme')
     if env['SIGNUP_ALLOWED_ORIGIN'] != 'https://' + HOST:
-        raise ValueError('SIGNUP_ALLOWED_ORIGIN must match the approved HTTPS origin')
+        raise DeploymentValidationError('SIGNUP_ALLOWED_ORIGIN must match the approved HTTPS origin')
     return {key: env[key] for key in required}
 
 
@@ -162,9 +212,9 @@ def check_page(html, locale, robots=''):
     page = Page()
     page.feed(html)
     if not (page.noindex or 'noindex' in robots.lower()):
-        raise ValueError('Preview noindex is missing')
+        raise DeploymentValidationError('Preview noindex is missing')
     if page.lang != locale or not page.main or 'elementa' not in html.lower():
-        raise ValueError('Locale/SSR content verification failed: ' + locale)
+        raise DeploymentValidationError('Locale/SSR content verification failed')
 
 
 def pages(host):
@@ -174,7 +224,7 @@ def pages(host):
         request = Request(url, headers={'User-Agent': 'Elementa-release-verifier', 'Cache-Control': 'no-cache'})
         with urlopen(request, timeout=20) as response:
             if response.status != 200 or response.url != url:
-                raise ValueError('Expected exact HTTPS 200 URL: ' + url)
+                raise DeploymentValidationError('Expected exact HTTPS 200 locale URL without redirects')
             check_page(response.read(2_000_000).decode(), locale, response.headers.get('X-Robots-Tag', ''))
 
 
@@ -189,40 +239,43 @@ def retry(fn, attempts=6):
 
 
 def verify(image, host, runtime_secret=None):
+    phase('verify-rollout-and-runtime')
     if not re.fullmatch(re.escape(REPOSITORY) + r'@sha256:[0-9a-f]{64}', image):
-        raise ValueError('Verification requires an immutable Elementa image')
+        raise DeploymentValidationError('Verification requires an immutable Elementa image')
     kube('rollout', 'status', 'deployment/elementa', '--timeout=180s')
     deployment = json.loads(kube('get', 'deployment', RELEASE, '-o', 'json'))
     spec = deployment['spec']['template']['spec']
     if [c['image'] for c in spec['containers']] != [image]:
-        raise ValueError('Live Deployment image does not match expected digest')
+        raise DeploymentValidationError('Live Deployment image does not match expected digest')
     if runtime_secret and spec['containers'][0].get('envFrom') != [{'secretRef': {'name': runtime_secret}}]:
-        raise ValueError('Live runtime Secret binding mismatch')
+        raise DeploymentValidationError('Live runtime Secret binding mismatch')
     pods = json.loads(kube('get', 'pods', '-l', 'app.kubernetes.io/instance=elementa', '-o', 'json'))['items']
     active = [p for p in pods if not p['metadata'].get('deletionTimestamp')]
     if len(active) < deployment['spec']['replicas']:
-        raise ValueError('Missing live replicas')
+        raise DeploymentValidationError('Missing live replicas')
     pod_ips = set()
     for pod in active:
         if [c['image'] for c in pod['spec']['containers']] != [image]:
-            raise ValueError('Pod image is not the expected immutable image')
+            raise DeploymentValidationError('Pod image is not the expected immutable image')
         if runtime_secret and pod['spec']['containers'][0].get('envFrom') != [{'secretRef': {'name': runtime_secret}}]:
-            raise ValueError('Pod runtime Secret binding mismatch')
+            raise DeploymentValidationError('Pod runtime Secret binding mismatch')
         statuses = pod['status'].get('containerStatuses', [])
         if not statuses or not all(c.get('ready') and c.get('imageID') for c in statuses):
-            raise ValueError('Pod is not ready with a resolved image ID')
+            raise DeploymentValidationError('Pod is not ready with a resolved image ID')
         pod_ips.add(pod['status']['podIP'])
     slices = json.loads(kube('get', 'endpointslices', '-l', 'kubernetes.io/service-name=elementa', '-o', 'json'))
     addresses = {a for s in slices['items'] for e in s.get('endpoints', [])
                  if e.get('conditions', {}).get('ready') is True for a in e['addresses']}
     if not addresses or not addresses.issubset(pod_ips):
-        raise ValueError('Service has no ready endpoints or routes to unexpected pods')
+        raise DeploymentValidationError('Service has no ready endpoints or routes to unexpected pods')
     ingress = json.loads(kube('get', 'ingress', RELEASE, '-o', 'json'))
     if not any(r['host'] == host and all(p['backend']['service']['name'] == RELEASE
                for p in r['http']['paths']) for r in ingress['spec']['rules']):
-        raise ValueError('Ingress host/backend mismatch')
+        raise DeploymentValidationError('Ingress host/backend mismatch')
     if runtime_secret:
+        phase('verify-database-ping')
         probe_database()
+    phase('verify-public-https-locales')
     retry(lambda: pages(host))
     print('Verified exact Deployment/pod image, ready endpoints, HTTPS /es /en and preview noindex')
 
@@ -235,7 +288,7 @@ def prior_release():
     history = json.loads(run('helm', 'history', RELEASE, '-n', NAMESPACE, '-o', 'json'))
     current = history[-1]
     if current['status'] != 'deployed':
-        raise ValueError('Existing release is not deployed; operator recovery required before upgrade')
+        raise DeploymentValidationError('Existing release is not deployed; operator recovery required before upgrade')
     import yaml
     manifest = run('helm', 'get', 'manifest', RELEASE, '-n', NAMESPACE, '--revision', str(current['revision']))
     docs = list(yaml.safe_load_all(manifest))
@@ -244,24 +297,26 @@ def prior_release():
     ingress = next(d for d in docs if d and d.get('kind') == 'Ingress')
     host = ingress['spec']['rules'][0]['host']
     if host != 'elementafestival.com' or not re.fullmatch(re.escape(REPOSITORY) + r'@sha256:[0-9a-f]{64}', image):
-        raise ValueError('Prior release must have the approved host and immutable image for safe rollback')
+        raise DeploymentValidationError('Prior release must have the approved host and immutable image for safe rollback')
     refs = deployment['spec']['template']['spec']['containers'][0].get('envFrom', [])
     runtime_secret = None
     if refs:
         runtime_secret = refs[0].get('secretRef', {}).get('name', '')
         if len(refs) != 1 or not re.fullmatch(r'elementa-runtime-[0-9a-f]{32}', runtime_secret):
-            raise ValueError('Prior runtime binding is not revision-pinned; operator migration required')
+            raise DeploymentValidationError('Prior runtime binding is not revision-pinned; operator migration required')
         if kube('get', 'secret', runtime_secret, '-o', 'jsonpath={.immutable}') != 'true':
-            raise ValueError('Prior immutable runtime Secret is missing or mutable')
+            raise DeploymentValidationError('Prior immutable runtime Secret is missing or mutable')
     return str(current['revision']), image, host, runtime_secret
 
 
 def transaction(chart, values, expected, host, runtime_secret=None, previous=None):
     try:
+        phase('helm-upgrade')
         run('helm', 'upgrade', '--install', RELEASE, chart, '-n', NAMESPACE,
             '--reset-values', '-f', values, '--atomic', '--wait', '--timeout', '5m', '--history-max', '10')
         verify(expected, host, runtime_secret)
-    except Exception:
+    except Exception as error:
+        print('Deployment transaction failed: ' + failure_message(error), file=sys.stderr)
         if previous:
             revision, image, prior_host, prior_secret = previous
             print('Deployment failed; restoring and verifying prior revision ' + revision, file=sys.stderr)
@@ -275,14 +330,17 @@ def transaction(chart, values, expected, host, runtime_secret=None, previous=Non
 
 
 def deploy(env):
+    phase('validate-production-configuration')
     cfg = config(env)
     image = REPOSITORY + '@' + cfg['IMAGE_DIGEST']
     # Exact workflow, OIDC issuer AND source SHA; no broad identity regexp.
+    phase('verify-image-signature')
     run('cosign', 'verify', '--certificate-identity', IDENTITY,
         '--certificate-oidc-issuer', 'https://token.actions.githubusercontent.com',
         '--certificate-github-workflow-sha', cfg['RELEASE_SHA'], image)
     with tempfile.TemporaryDirectory(prefix='elementa-deploy-') as directory:
         root = Path(directory)
+        phase('load-protected-kubeconfig')
         with selected_kubeconfig(root, cfg['LINODE_KUBECONFIG']):
             deploy_selected(cfg, image, root)
 
@@ -290,33 +348,40 @@ def deploy(env):
 def deploy_selected(cfg, image, root):
         directory = str(root)
         # The protected kubeconfig is the owner's target authority, not local defaults.
+        phase('validate-selected-context')
         context = run('kubectl', 'config', 'current-context')
         contexts = run('kubectl', 'config', 'get-contexts', '-o', 'name').splitlines()
         if not context or context not in contexts:
-            raise ValueError('Protected kubeconfig current-context is absent or invalid; refusing all writes')
+            raise DeploymentValidationError('Protected kubeconfig current-context is absent or invalid; refusing all writes')
+        phase('check-cluster-landmark-default-bd-site')
         if run('kubectl', '--request-timeout=30s', '-n', 'default', 'get',
                'deployment', 'bd-site', '-o', 'name') != 'deployment.apps/bd-site':
-            raise ValueError('Expected default/bd-site deployment is absent; refusing all writes')
+            raise DeploymentValidationError('Expected default/bd-site deployment is absent; refusing all writes')
+        phase('check-ingress-class-nginx')
         kube('get', 'ingressclass', 'nginx', '-o', 'name')
+        phase('check-certificate-issuer')
         if kube('get', 'clusterissuer', 'letsencrypt-http', '-o', 'jsonpath={.status.conditions[?(@.type=="Ready")].status}') != 'True':
-            raise ValueError('letsencrypt-http ClusterIssuer is not ready')
+            raise DeploymentValidationError('letsencrypt-http ClusterIssuer is not ready')
         # Prevent accidentally taking over another release or namespace ingress host.
+        phase('check-host-ownership')
         ingresses = json.loads(run('kubectl', '--request-timeout=30s', 'get', 'ingresses', '-A', '-o', 'json'))
         for ingress in ingresses['items']:
             if any(r.get('host') == HOST for r in ingress['spec'].get('rules', [])):
                 meta = ingress['metadata']
                 if meta['namespace'] != NAMESPACE or meta['name'] != RELEASE:
-                    raise ValueError('Approved host already belongs to a different ingress')
+                    raise DeploymentValidationError('Approved host already belongs to a different ingress')
         version = '0.1.0-sha.' + cfg['RELEASE_SHA']
+        phase('pull-and-validate-published-chart')
         run('helm', 'pull', 'oci://ghcr.io/berryhill/charts/elementa', '--version', version, '--destination', directory)
         chart = str(root / ('elementa-' + version + '.tgz'))
         import yaml
         metadata = yaml.safe_load(run('helm', 'show', 'chart', chart))
         if metadata['version'] != version or metadata['appVersion'] != cfg['RELEASE_SHA']:
-            raise ValueError('Published chart source/version mismatch')
+            raise DeploymentValidationError('Published chart source/version mismatch')
         defaults = yaml.safe_load(run('helm', 'show', 'values', chart))
         if defaults['image']['digest'] != cfg['IMAGE_DIGEST']:
-            raise ValueError('Published chart does not reference the signed image digest')
+            raise DeploymentValidationError('Published chart does not reference the signed image digest')
+        phase('inspect-prior-release')
         previous = prior_release()
         runtime_secret = RUNTIME_SECRET + '-' + uuid.uuid4().hex
         values = root / 'values.json'
@@ -325,16 +390,19 @@ def deploy_selected(cfg, image, root):
             'existingEnvSecret': runtime_secret, 'site': {'stage': 'preview', 'origin': 'https://' + HOST,
             'festivalFactsApproved': False, 'announcementInstantApproved': False},
             'ingress': {'host': HOST, 'className': 'nginx', 'tls': {'enabled': True, 'secretName': 'elementa-tls'}}}))
+        phase('lint-and-render-chart')
         run('helm', 'lint', chart, '--strict', '-f', str(values))
         rendered = list(yaml.safe_load_all(run('helm', 'template', RELEASE, chart, '-n', NAMESPACE, '-f', str(values))))
         deployment = next(d for d in rendered if d and d.get('kind') == 'Deployment')
         container = deployment['spec']['template']['spec']['containers'][0]
         if container['image'] != image or container['ports'][0]['containerPort'] != 3000:
-            raise ValueError('Rendered runtime image/port mismatch')
+            raise DeploymentValidationError('Rendered runtime image/port mismatch')
         runtime = {e['name']: e.get('value') for e in container['env']}
         if runtime.get('SITE_STAGE') != 'preview' or runtime.get('SITE_ORIGIN') != 'https://' + HOST or container.get('envFrom') != [{'secretRef': {'name': runtime_secret}}]:
-            raise ValueError('Rendered publication configuration mismatch')
+            raise DeploymentValidationError('Rendered publication configuration mismatch')
+        phase('provision-namespace')
         provision_namespace()
+        phase('provision-runtime-and-pull-secrets')
         provision_secrets(cfg, runtime_secret)
         transaction(chart, str(values), image, HOST, runtime_secret, previous)
 
@@ -344,5 +412,5 @@ if __name__ == '__main__':
         deploy(os.environ)
     except Exception as error:
         # check_output captures stdout. Never dump kubeconfig, Secret data or Helm values.
-        print('Elementa deployment FAILED (details suppressed; check protected configuration and release state)', file=sys.stderr)
+        print('Elementa deployment FAILED: ' + failure_message(error), file=sys.stderr)
         sys.exit(1)

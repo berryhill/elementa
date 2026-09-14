@@ -18,7 +18,7 @@ SHA = 'a' * 40
 DIGEST = 'sha256:' + 'b' * 64
 IMAGE = deploy.REPOSITORY + '@' + DIGEST
 OLD = deploy.REPOSITORY + '@sha256:' + 'c' * 64
-ENV = dict(LINODE_KUBECONFIG='YXBpVmVyc2lvbjogdjE=', MONGODB_URI='mongodb://db/elementa',
+ENV = dict(LINODE_KUBECONFIG='YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCg==', MONGODB_URI='mongodb://db/elementa',
            SIGNUP_ALLOWED_ORIGIN='https://elementafestival.com', GHCR_TOKEN='secret-canary',
            RELEASE_SHA=SHA, IMAGE_DIGEST=DIGEST)
 PRIOR_SECRET = 'elementa-runtime-' + 'd' * 32
@@ -162,6 +162,47 @@ class DeliveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'valid base64'):
                 with deploy.selected_kubeconfig(root, 'invalid!'):
                     pass
+
+    def test_kubeconfig_representations_and_parser_errors_are_private(self):
+        import base64
+        raw = 'apiVersion: v1\nkind: Config\ncurrent-context: selected\n'
+        encoded = base64.b64encode(raw.encode()).decode()
+        variants = [raw, json.dumps({'apiVersion': 'v1', 'kind': 'Config'}),
+                    encoded, '\n  ' + '\n'.join(encoded[i:i+12] for i in range(0, len(encoded), 12)) + '\n']
+        for value in variants:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                with deploy.selected_kubeconfig(root, value):
+                    self.assertEqual(yaml.safe_load((root / 'kubeconfig').read_bytes())['kind'], 'Config')
+        for value in ('sensitive-canary: [broken', '[]', 'null', 'apiVersion: v1',
+                      base64.b64encode(b'\xffsensitive-canary').decode()):
+            with tempfile.TemporaryDirectory() as directory, patch.object(deploy, 'run') as run:
+                with self.assertRaises(deploy.DeploymentValidationError) as error:
+                    with deploy.selected_kubeconfig(Path(directory), value):
+                        self.fail('invalid kubeconfig accepted')
+                self.assertNotIn('sensitive-canary', deploy.failure_message(error.exception))
+                self.assertFalse((Path(directory) / 'kubeconfig').exists())
+                run.assert_not_called()
+
+    def test_only_authored_diagnostics_are_reported(self):
+        from types import SimpleNamespace
+        canary = 'sensitive-canary'
+        for marker, expected in [('Unauthorized', 'authentication rejected'), ('Forbidden', 'authorization denied'),
+                                 ('x509:', 'TLS'), ('no such host', 'DNS'), ('NotFound', 'not found'),
+                                 ('current-context is not set', 'current-context'), ('unknown', 'unclassified')]:
+            with patch.object(deploy.subprocess, 'run', return_value=SimpleNamespace(
+                    returncode=1, stdout=canary, stderr=marker + ' ' + canary)):
+                with self.assertRaises(deploy.DeploymentCommandError) as error:
+                    deploy.run('cmd', canary, payload=canary)
+                message = deploy.failure_message(error.exception)
+                self.assertIn(expected, message)
+                self.assertNotIn(canary, message)
+        for error in (ValueError(canary), RuntimeError(canary), KeyError(canary), yaml.YAMLError(canary)):
+            self.assertNotIn(canary, deploy.failure_message(error))
+        with self.assertRaises(deploy.DeploymentValidationError) as error:
+            deploy.config({**ENV, 'SIGNUP_ALLOWED_ORIGIN': canary})
+        self.assertIn('SIGNUP_ALLOWED_ORIGIN', deploy.failure_message(error.exception))
+        self.assertNotIn(canary, deploy.failure_message(error.exception))
 
     def test_namespace_create_replace_and_conflict_fail_closed(self):
         existing = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {
