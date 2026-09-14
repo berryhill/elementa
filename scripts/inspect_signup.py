@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Read-only signup diagnostics. Never emit secrets, addresses or raw errors."""
+"""Bounded read-only signup authentication diagnosis; no credentials in output."""
 import json
 import os
 from pathlib import Path
 import sys
 import tempfile
-from deploy import selected_kubeconfig, kube, run, failure_message
+from deploy import selected_kubeconfig, kube, failure_message
 
 PROBE = r"""
 const {MongoClient} = require('mongodb');
@@ -13,42 +13,38 @@ const {MongoClient} = require('mongodb');
  const uri = process.env.MONGODB_URI;
  console.log(JSON.stringify({mongodbConfigured:!!uri,originMatches:process.env.SIGNUP_ALLOWED_ORIGIN==='https://elementafestival.com'}));
  if(!uri) return;
- let client;
- try {
-  const target = new URL(uri);
-  if (['127.0.0.1','localhost','[::1]'].includes(target.hostname)) {
-    target.hostname = 'mongo-mongodb-headless.default.svc.cluster.local';
-    console.log(JSON.stringify({probeOnlyRetarget:true}));
-  }
-  client = new MongoClient(target.toString(),{serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000});
-  console.log(JSON.stringify({endpoints:client.options.hosts.map(h=>({host:h.host,port:h.port})),directConnection:client.options.directConnection}));
-  await client.connect();
-  console.log(JSON.stringify({connection:'ok'}));
-  await client.db('elementa').command({ping:1});
-  console.log(JSON.stringify({ping:'ok'}));
-  await client.db('elementa').collection('subscribers').findOne({_id:'elementa-issue21-qa@example.invalid'},{projection:{_id:1},maxTimeMS:5000});
-  console.log(JSON.stringify({subscriberRead:'ok'}));
- } catch(e) {
-  const names=['MongoServerError','MongoServerSelectionError','MongoParseError','MongoNetworkError','MongoNetworkTimeoutError'];
-  console.log(JSON.stringify({error:names.includes(e.name)?e.name:'unclassified',code:Number.isInteger(e.code)?e.code:null,
-   authenticationFailed:e.code===18,unauthorized:e.code===13,
-   dnsFailure:/ENOTFOUND|EAI_AGAIN/.test(String(e.message)),
-   connectionRefused:/ECONNREFUSED/.test(String(e.message)),
-   tlsFailure:/certificate|TLS|SSL/i.test(String(e.message))}));
- } finally { if(client) await client.close(); }
+ // Same configured credentials and server, at most three known auth databases.
+ // Never try passwords, retarget a server, change users or mutate records.
+ const attempts = [undefined, 'admin', 'elementa'];
+ const seen = new Set();
+ for (const authSource of attempts) {
+  let client;
+  let authenticationFailed = false;
+  const label = authSource || 'configured';
+  try {
+   client = new MongoClient(uri,{...(authSource ? {authSource} : {}),serverSelectionTimeoutMS:5000,connectTimeoutMS:5000,socketTimeoutMS:5000});
+   const effective = client.options.credentials?.source;
+   if (seen.has(effective)) continue;
+   seen.add(effective);
+   console.log(JSON.stringify({attempt:label,authSource:['admin','elementa'].includes(effective)?effective:'other',credentialsPresent:!!client.options.credentials}));
+   await client.connect();
+   await client.db('elementa').command({ping:1});
+   await client.db('elementa').collection('subscribers').findOne({_id:'elementa-issue21-qa@example.invalid'},{projection:{_id:1},maxTimeMS:5000});
+   console.log(JSON.stringify({attempt:label,connection:'ok',subscriberRead:'ok'}));
+   break;
+  } catch(e) {
+   authenticationFailed = e.code===18;
+   const names=['MongoServerError','MongoServerSelectionError','MongoParseError','MongoNetworkError','MongoNetworkTimeoutError'];
+   console.log(JSON.stringify({attempt:label,error:names.includes(e.name)?e.name:'unclassified',code:Number.isInteger(e.code)?e.code:null,authenticationFailed,unauthorized:e.code===13}));
+  } finally { if(client) await client.close(); }
+  if (!authenticationFailed) break;
+ }
 })().catch(()=>{console.log('probe_failed');process.exitCode=1;});
 """
 
 def inspect():
     with tempfile.TemporaryDirectory(prefix='elementa-signup-') as directory:
         with selected_kubeconfig(Path(directory), os.environ['LINODE_KUBECONFIG']):
-            # Discover existing database service identities only; never read Secrets
-            # or enumerate database contents. A candidate is not authorization to use it.
-            services = json.loads(run('kubectl','--request-timeout=30s','get','services','-A','-o','json'))
-            candidates = [{'namespace': s['metadata']['namespace'], 'name': s['metadata']['name'],
-                           'ports': [p['port'] for p in s['spec'].get('ports', [])]}
-                          for s in services['items'] if any(p.get('port') == 27017 for p in s['spec'].get('ports', []))]
-            print('MONGODB_SERVICE_CANDIDATES ' + json.dumps(candidates), flush=True)
             pods = json.loads(kube('get','pods','-l','app.kubernetes.io/instance=elementa','-o','json'))
             for pod in pods['items']:
                 if pod.get('status',{}).get('phase') != 'Running':
