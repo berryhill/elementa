@@ -14,7 +14,7 @@ Protect the GitHub **production** Environment with main-only deployment policy a
 
 | Secret | Meaning |
 | --- | --- |
-| `LINODE_KUBECONFIG` | Base64-encoded kubeconfig with the intended Linode cluster selected as its current-context (bd-site's transport convention). |
+| `LINODE_KUBECONFIG` | Raw YAML/JSON v1 Config or base64-encoded kubeconfig (line-wrapped base64 accepted), with the intended Linode cluster selected as its current-context. |
 | `MONGODB_URI` | MongoDB connection URI with credentials authorized for the fixed `elementa.subscribers` signup namespace. |
 | `SIGNUP_ALLOWED_ORIGIN` | Exactly `https://elementafestival.com`. |
 | `GHCR_TOKEN` | Durable GHCR read credential belonging to **berryhill**, authorized for the Elementa image and chart packages. |
@@ -37,6 +37,8 @@ Ensure DNS points at the intended ingress and certificate issuance works. The wo
 The kubeconfig is decoded into a mode-0600 file in an ephemeral temporary directory; the script restores the process's prior KUBECONFIG after use. Namespace-scoped `ghcr-pull` is created/updated as a `kubernetes.io/dockerconfigjson` Secret via server-side apply. Each attempt creates a new immutable `elementa-runtime-<uuid>` Secret containing only `MONGODB_URI` and `SIGNUP_ALLOWED_ORIGIN`. The chart's existing `existingEnvSecret` reference binds that snapshot through envFrom; values and Helm history contain its name, not its data. There is no mutable runtime alias used by workloads.
 
 Secret objects travel to kubectl only on stdin. Both subprocess output streams are captured and failures suppress raw argv, payloads and command output. Do not enable shell tracing, dump environment variables, render Secret values, or print MongoDB error contents. Runner destruction handles abrupt termination; temporary-directory cleanup handles normal exit.
+
+Failures now report the last fixed deployment phase plus authored validation messages or fixed command classifications (authentication, authorization, TLS, DNS/network, missing resource, config load, signature). Classifications are hints from stderr, not raw excerpts or proof of root cause. Unexpected library/parser exceptions remain suppressed. For example, failure at `validate-production-configuration` names the invalid setting without its value; failure at `check-cluster-landmark-default-bd-site` distinguishes access/network problems from a missing landmark. Correct the named protected value or access requirement; do not disable cluster, signature, TLS, or rollback checks. Raw kubeconfig support does not change the selected-context or cluster-landmark authority checks.
 
 Immutable runtime snapshots are deliberately retained outside Helm ownership so old revisions can roll back to their original database/origin bindings. This is not automated garbage collection: operators may remove only snapshots no retained revision or live Pod references. Failed attempts may leave unused snapshots. The shared pull Secret can rotate; rollback does not restore an old registry token, which must continue to authorize old image digests.
 
