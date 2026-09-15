@@ -188,7 +188,7 @@ header .languages{margin-left:auto}
 .languages a[aria-current=page]{opacity:1;text-decoration:underline;text-underline-offset:6px}
 body[data-phase=rest] #countdown-label{font-size:clamp(19px,2vw,25px);line-height:1.25;font-weight:400;letter-spacing:.015em;text-transform:none;margin:0 auto;max-width:620px;text-wrap:balance;color:inherit}
 body[data-phase=rest] #countdown{margin-top:12px}
-body[data-phase=rest] #release-date{font-size:12px;line-height:1.5;letter-spacing:.045em;margin:10px 0 0;opacity:.8}
+body[data-phase=rest] #release-date{font-size:12px;line-height:1.5;letter-spacing:.045em;margin:10px auto 0;opacity:.8}
 @media(max-width:600px){body[data-phase=rest] #countdown-label{font-size:19px;max-width:330px}body[data-phase=rest] #countdown{margin-top:10px}}
 /* Keep the resting header/main/footer geometry, but let intrinsic content grow
    at zoom and on short screens instead of overflowing an absolute-positioned main. */
